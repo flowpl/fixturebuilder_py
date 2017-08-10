@@ -16,9 +16,3 @@ script:
 
 after_success:
 - "scripts/reportCoverage"
-
-deploy:
-  provider: script
-  script: scripts/pypiPublish
-  on:
-    tags: true
