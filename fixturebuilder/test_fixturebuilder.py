@@ -130,3 +130,11 @@ class FixtureBuilderTest(TestCase):
     def test_return_builder_data_as_json(self):
         test_data = json_encode(DATA)
         self.assertEqual(self.builder.json, test_data)
+
+    def test_duplicate_the_last_list_element_and_return_a_new_builder_instance(self):
+        test_data = deepcopy(DATA)
+        test_data['list2'].append(deepcopy(test_data['list2'][-1]))
+        result = self.builder.duplicate_last_list_element('list2')
+        self.assertIsInstance(result, FixtureBuilder)
+        self.assertDictEqual(test_data, result.data)
+        self.assertIsNot(self.builder.data, result)

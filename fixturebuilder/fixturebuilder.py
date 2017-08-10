@@ -134,6 +134,16 @@ class FixtureBuilder(object):
             raise AttributeError('dict operations are not supported on list element {} of property {}'.format(index, prop_name))
         return FixtureBuilder(element, self, Location(prop_name, index))
 
+    def duplicate_last_list_element(self, prop_name):
+        """
+        duplicates the last list element
+        :param prop_name: str
+        :return: FixtureBuilder
+        """
+        data = deepcopy(self.data)
+        data[prop_name].append(deepcopy(data[prop_name][-1]))
+        return FixtureBuilder(data, self.parent, self.location)
+
     def done(self):
         """
         finish working on a child builder and return to the parent
