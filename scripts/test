@@ -13,6 +13,6 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 pushd ${DIR}/..
 
-coverage run --source . --branch --omit 'test_*' -m unittest discover
+coverage run --source . --branch --omit 'test_*,snapshot/**' -m unittest discover
 
 popd
