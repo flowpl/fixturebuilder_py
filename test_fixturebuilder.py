@@ -1,6 +1,7 @@
 
 from fixturebuilder import FixtureBuilder
-from snapshottest import TestCase
+from json import dumps as json_encode
+from unittest import TestCase
 from copy import deepcopy
 
 DATA = {
@@ -19,6 +20,7 @@ DATA = {
 
 class FixtureBuilderTest(TestCase):
     def setUp(self):
+        super(FixtureBuilderTest, self).setUp()
         self.builder = FixtureBuilder.create(DATA)
 
     def test_init_builder(self):
@@ -121,4 +123,5 @@ class FixtureBuilderTest(TestCase):
             self.builder.with_dict_list_element('prop1')
 
     def test_return_builder_data_as_json(self):
-        self.assertMatchSnapshot(self.builder.json)
+        test_data = json_encode(DATA)
+        self.assertEqual(self.builder.json, test_data)
