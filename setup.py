@@ -8,6 +8,5 @@ setup(
   author_email='me@florianplattner.de',
   license='MIT',
   url='https://github.com/flowpl/fixturebuilder_py',
-  download_url='https://github.com/flowpl/mypackage/archive/0.1.tar.gz',
   keywords=['testing', 'fixture', 'test data'],
 )
