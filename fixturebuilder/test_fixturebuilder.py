@@ -1,8 +1,13 @@
 
-from fixturebuilder import FixtureBuilder
+
 from json import dumps as json_encode
 from unittest import TestCase
 from copy import deepcopy
+
+try:
+    from fixturebuilder.fixturebuilder import FixtureBuilder
+except:
+    from fixturebuilder import FixtureBuilder
 
 DATA = {
     'prop1': 'value1',
