@@ -1,0 +1,68 @@
+CHANGES
+=======
+
+1.2.7
+-----
+
+* docs: add an empty line at the beginning of the Readme to make parsing easier
+
+1.2.6
+-----
+
+* docs: convert README from Markdown to RestructuredText
+
+1.2.5
+-----
+
+* fix: package layout
+* fix: remove automatic deployment to pypi because travis sends 1 deployment per python version
+
+1.2.4
+-----
+
+* fix: remove entry\_point from setup.cfg
+
+1.2.3
+-----
+
+* fix: switch pakcaging from distutils to setuptools
+
+1.2.1
+-----
+
+* fix: print directory contents before deploy
+
+1.2.0
+-----
+
+* docs: adds code examples to README
+* feat: add duplicate\_last\_list\_element
+
+1.1.2
+-----
+
+* fix: print branches before deploy
+
+1.1.1
+-----
+
+* fix: explicitly checkout master branch before deployment
+
+1.1.0
+-----
+
+* feat: adds .landscape.yml
+* fix: syntax error in config.cfg
+* feat: switch packaging to pbr
+* docs: improve doc strings
+* fix: make fixturebuilder imports work both for python 2 and 3
+* fix: remove dowload-url from setup.py
+* feat: update ci to automatically publish to pypi
+* fix: remove snapshottest from requirements
+* fix: exchange snapshottest with explicit json encoding
+* fix: remove python 2.6 and 3.2 from list of supported versions
+* fix: don't cover snapshots
+* feat: adds CI badges to readme
+* feat: setup ci using travis-ci
+* feat: implement FixtureBuilder
+* Initial commit
