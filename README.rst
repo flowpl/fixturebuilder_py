@@ -2,13 +2,6 @@
 fixturebuilder_py
 =================
 
-.. image:: https://travis-ci.org/flowpl/fixturebuilder_py.svg?branch=master
-:target: https://travis-ci.org/flowpl/fixturebuilder_py.svg?branch=master
-.. image:: https://landscape.io/github/flowpl/fixturebuilder_py/master/landscape.svg?style=flat
-:target: https://landscape.io/github/flowpl/fixturebuilder_py/master
-.. image:: https://coveralls.io/repos/github/flowpl/fixturebuilder_py/badge.svg?branch=master
-:target: https://coveralls.io/github/flowpl/fixturebuilder_py?branch=master
-
 
 Install
 -------
