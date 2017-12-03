@@ -2,6 +2,8 @@
 from copy import deepcopy
 from json import dumps as json_encode
 
+import re
+
 
 class Location(object):
     def __init__(self, prop_name, index=None):
@@ -76,7 +78,7 @@ class FixtureBuilder(object):
         returns builder's data
         :return:
         """
-        return self._data
+        return deepcopy(self._data)
 
     @property
     def json(self):
@@ -85,6 +87,14 @@ class FixtureBuilder(object):
         :return str
         """
         return json_encode(self.data)
+
+    def get(self, prop_name):
+        """
+        returns a single property by name
+        :param prop_name: str
+        :return:
+        """
+        return self._data[prop_name]
 
     def set(self, prop_name, value):
         """
@@ -157,3 +167,107 @@ class FixtureBuilder(object):
         else:
             data[self.location.prop_name] = self.data
         return FixtureBuilder(data, self.parent.parent, self.parent.location)
+
+
+class FixtureCollection(object):
+    def __init__(self, fixtures, links):
+        self._fixtures = fixtures
+        self._links = links
+
+    @staticmethod
+    def create():
+        return FixtureCollection({}, {})
+
+    @property
+    def fixtures(self):
+        """
+        :return: FixtureBuilder[]
+        """
+        return self._fixtures
+
+    @property
+    def data(self):
+        """
+        :return: dict all the data inside the collection
+        """
+        def find_linked_value(definition):
+            if definition['linked_value'] == '' and len(self._fixtures[definition['linked_fixture']]) == 1:
+                return self._fixtures[definition['linked_fixture']][0].get(definition['linked_field'])
+
+            for fix in self._fixtures[definition['linked_fixture']]:
+                value = fix.get(definition['linked_field'])
+                if str(value) == str(definition['linked_value']):
+                    return value
+
+        d = {}
+        for key, builder_list in self._fixtures.items():
+            d[key] = []
+            for element in builder_list:
+                data = element.data
+                if key in self._links:
+                    for definition in self._links[key]:
+                        value = find_linked_value(definition)
+                        data[definition['target_field']] = value
+                d[key].append(data)
+        return d
+
+    def get_fixture(self, name):
+        """
+        returns a single fixture by name
+        :param name:
+        :return:
+        """
+        return self._fixtures[name]
+
+    def add_fixture(self, name, definition):
+        """
+        adds a new Fixture to the Collection
+        :param name: name for the fixture inside the collection
+        :param definition: dict|FixtureBuilder definition of the fixture
+        :return: FixtureBuilder
+        """
+        fixtures = self._fixtures_copy()
+        if isinstance(definition, FixtureBuilder):
+            builder = definition
+        else:
+            builder = FixtureBuilder.create(definition)
+        if name not in fixtures:
+            fixtures[name] = []
+        fixtures[name].append(builder)
+        return FixtureCollection(fixtures, self._links_copy())
+
+    def add_link(self, link_name, linked_field):
+        """
+        Adds a link between fixtures
+        :param link_name: str definition of the link to set up :code:`table_name.field_name`
+        :param linked_field: str definition of the field to link to :code:`table_name.field_name=target_value`
+        :return: FixtureCollection
+        """
+        link_name_regexp = '^[a-z0-9_]+\.[a-z0-9_]+$'
+        linked_field_regexp = '^[a-z0-9_]+\.[a-z0-9_]+='
+        if not re.match(link_name_regexp, link_name, flags=re.IGNORECASE):
+            raise ValueError('link_name does not match expected format ({})'.format(link_name_regexp))
+        if linked_field.find('=') == -1:
+            linked_field += '='
+        if not re.match(linked_field_regexp, linked_field):
+            raise ValueError('linked_field does not match expected format ({})'.format(link_name_regexp))
+
+        target_fixture, target_field = link_name.split('.')
+        link_def, linked_value = linked_field.split('=')
+        linked_fixture, linked_field = link_def.split('.')
+        links = self._links_copy()
+        if target_fixture not in links:
+            links[target_fixture] = []
+        links[target_fixture].append({
+            'target_field': target_field,
+            'linked_fixture': linked_fixture,
+            'linked_field': linked_field,
+            'linked_value': linked_value,
+        })
+        return FixtureCollection(self._fixtures_copy(), links)
+
+    def _fixtures_copy(self):
+        return {key: val for key, val in self._fixtures.items()}
+
+    def _links_copy(self):
+        return {key: deepcopy(link) for key, link in self._links.items()}

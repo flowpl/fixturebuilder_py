@@ -1,3 +1,3 @@
-from .fixturebuilder import FixtureBuilder
+from .fixturebuilder import FixtureBuilder, FixtureCollection
 
-__all__ = ['FixtureBuilder']
+__all__ = ['FixtureBuilder', 'FixtureCollection']
