@@ -6,6 +6,8 @@ from copy import deepcopy
 
 from datetime import datetime
 
+from faker import Faker
+
 from . import FixtureBuilder, FixtureCollection
 
 
@@ -52,23 +54,23 @@ class FixtureBuilderTest(TestCase):
         test_data = deepcopy(self.DATA)
         test_value = 'new value'
         test_data['list1'].append(test_value)
-        result = self.builder.add('list1', test_value)
+        result = self.builder.append('list1', test_value)
         self.assertDictEqual(test_data, result.data)
         self.assertIsInstance(result, FixtureBuilder)
         self.assertIsNot(self.builder, result)
 
     def test_leave_original_builder_unchanged_when_adding_an_element_to_a_list(self):
         test_data = deepcopy(self.builder.data)
-        self.builder.add('list1', 'new value')
+        self.builder.append('list1', 'new value')
         self.assertDictEqual(self.builder.data, test_data)
 
     def test_raise_error_when_adding_to_a_missing_list(self):
         with self.assertRaises(KeyError) as context:
-            self.builder.add('missing_prop1', 'some_value')
+            self.builder.append('missing_prop1', 'some_value')
 
     def test_raise_error_when_adding_to_an_invalid_list(self):
         with self.assertRaises(AttributeError) as context:
-            self.builder.add('prop1', 'some_value')
+            self.builder.append('prop1', 'some_value')
 
     def test_set_property_on_a_dict_and_return_new_builder_instance(self):
         test_data = deepcopy(self.DATA)
@@ -137,6 +139,100 @@ class FixtureBuilderTest(TestCase):
         self.assertDictEqual(test_data, result.data)
         self.assertIsNot(self.builder.data, result)
 
+    def test_add_new_field_using_str(self):
+        builder = FixtureBuilder.create({}) \
+            .add('prop1', 'some value') \
+            .add('prop2', 12345)
+
+        result1 = builder.data
+        result2 = builder.data
+
+        self.assertEqual(result1, result2)
+
+    def test_add_new_prop_using_value_generator(self):
+        faker = Faker()
+        builder = FixtureBuilder.create({}) \
+            .add('prop1', faker.address) \
+            .add('prop2', faker.random_number)
+
+        result1 = builder.data
+        result2 = builder.data
+
+        self.assertEqual(result1, result2)
+
+    def test_set_prop_using_value_generator(self):
+        faker = Faker()
+        builder = FixtureBuilder.create(self.DATA) \
+            .set('prop1', faker.address) \
+            .set('prop2', faker.random_number)
+
+        result1 = builder.data
+        result2 = builder.data
+
+        self.assertEqual(result1, result2)
+
+    def test_append_value_to_list_using_value_generator(self):
+        faker = Faker()
+        builder = FixtureBuilder.create(self.DATA) \
+            .append('list1', faker.address)
+
+        result1 = builder.data
+        result2 = builder.data
+
+        self.assertEqual(result1, result2)
+
+    def test_generate_new_values_from_generator_when_duplicating_list_element(self):
+        faker = Faker()
+        builder = FixtureBuilder.create({}) \
+            .add('list1', []) \
+            .append('list1', faker.random_number) \
+            .duplicate_last_list_element('list1') \
+
+        element1, element2 = builder.get('list1')
+        self.assertNotEqual(element1, element2)
+
+    def test_generate_new_values_from_generator_when_duplicating_dict_list_element(self):
+        faker = Faker()
+        builder = FixtureBuilder.create({}) \
+            .add('list1', []) \
+            .append('list1', {'dictprop1': faker.random_number}) \
+            .duplicate_last_list_element('list1') \
+
+        element1, element2 = builder.get('list1')
+        self.assertNotEqual(element1, element2)
+
+    def test_keep_old_values_when_setting_a_prop(self):
+        faker = Faker()
+        builder = FixtureBuilder.create({'prop1': faker.random_number, 'prop2': faker.random_number})
+        self.assertEqual(builder.data, builder.data)
+
+        new_data = builder.set('prop1', 'newvalue').data
+        self.assertEqual(new_data['prop1'], 'newvalue')
+        self.assertEqual(new_data['prop2'], builder.get('prop2'))
+
+    def test_keep_old_values_when_adding_a_prop(self):
+        faker = Faker()
+        builder = FixtureBuilder.create({'prop1': faker.random_number, 'prop2': faker.random_number})
+        self.assertEqual(builder.data, builder.data)
+
+        new_data = builder.add('prop3', 'newvalue').data
+        self.assertEqual(new_data['prop1'], builder.get('prop1'))
+        self.assertEqual(new_data['prop2'], builder.get('prop2'))
+        self.assertEqual(new_data['prop3'], 'newvalue')
+
+    def test_copy_fixturebuilder(self):
+        faker = Faker()
+        builder = FixtureBuilder.create({'prop1': 123, 'prop2': faker.random_number})
+        self.assertEqual(builder.data, builder.data)
+
+        builder2 = builder.copy()
+        self.assertEqual(builder2.data, builder2.data)
+        self.assertEqual(builder.get('prop1'), builder2.get('prop1'))
+        self.assertNotEqual(builder.get('prop2'), builder2.get('prop2'))
+
+    def test_raise_not_implemented_error_when_copying_child_builder(self):
+        with self.assertRaises(NotImplementedError):
+            self.builder.with_dict('dict1').copy()
 
 class FixtureCollectionTest(TestCase):
     DATA1 = {

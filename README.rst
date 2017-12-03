@@ -104,6 +104,40 @@ Usage FixtureBuilder
     builder.add('newprop', 'newvalue')
 
 
+Usage value creator function
+----------------------------
+.. code-block:: python
+
+    from fixturebuilder import FixtureBuilder
+    from faker import Faker
+
+    # define the data structure to be worked on
+    start_data = {
+        'prop1': faker.random_number,
+        'prop2': faker.address,
+        'dict1': {
+            'dictprop1': faker.first_name
+        },
+        'list1': [
+            faker.date,
+            faker.date
+        ],
+        'list2': [
+            {'listdictprop1': faker.text, 'listdictlist1': [faker.]}
+        ]
+    }
+
+    # initialize a new builder
+    builder = FixtureBuilder.create(start_data)
+
+    # retrieve the data unchanged
+    test_data1 = builder.data
+
+    # creates a new set of data
+    builder2 = builder.copy()
+
+
+
 Usage FixtureCollection
 -----------------------
 

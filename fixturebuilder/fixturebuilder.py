@@ -5,7 +5,7 @@ from json import dumps as json_encode
 import re
 
 
-class Location(object):
+class _Location(object):
     def __init__(self, prop_name, index=None):
         """
         initializes a new Location
@@ -34,6 +34,28 @@ class Location(object):
         return self._index is not None
 
 
+class _Value(object):
+    def __init__(self, creator, current_value):
+        self._value_creator = creator
+        self._current_value = current_value
+
+    @staticmethod
+    def create(definition):
+        try:
+            return _Value(definition, definition())
+        except TypeError:
+            return _Value(lambda: definition, definition)
+
+    @property
+    def value(self):
+        return self._current_value
+
+    def copy(self, call_creator):
+        if call_creator:
+            return _Value(self._value_creator, self._value_creator())
+        return _Value(self._value_creator, self._current_value)
+
+
 class FixtureBuilder(object):
     def __init__(self, data, parent, location):
         """
@@ -42,7 +64,7 @@ class FixtureBuilder(object):
         :param parent: FixtureBuilder
         :param location: Location
         """
-        self._data = data
+        self._data = self._wrap(data)
         self._location = location
         self._parent = parent
 
@@ -78,7 +100,7 @@ class FixtureBuilder(object):
         returns builder's data
         :return:
         """
-        return deepcopy(self._data)
+        return self._unwrap(self._data)
 
     @property
     def json(self):
@@ -94,7 +116,7 @@ class FixtureBuilder(object):
         :param prop_name: str
         :return:
         """
-        return self._data[prop_name]
+        return self._unwrap(self._data[prop_name])
 
     def set(self, prop_name, value):
         """
@@ -103,23 +125,34 @@ class FixtureBuilder(object):
         :param value:
         :return: FixtureBuilder
         """
-        if prop_name not in self.data:
+        if prop_name not in self._data:
             raise KeyError('attribute {} does not exist in {}'.format(prop_name, json_encode(self.data)))
-        data = deepcopy(self.data)
-        data[prop_name] = value
+        data = self._deepcopy(self._data)
+        data[prop_name] = self._wrap(value)
         return FixtureBuilder(data, self.parent, self.location)
 
     def add(self, prop_name, value):
+        """
+        adds a new property to the data definition.
+        :param prop_name: str
+        :param value:
+        :return: FixtureBuilder
+        """
+        data = self._deepcopy(self._data)
+        data[prop_name] = self._wrap(value)
+        return FixtureBuilder(data, self.parent, self.location)
+
+    def append(self, prop_name, value):
         """
         append element to list
         :param prop_name: str
         :param value:
         :return: FixtureBuilder
         """
-        if prop_name not in self.data:
+        if prop_name not in self._data:
             raise KeyError('attribute {} does not exist in {}'.format(prop_name, json_encode(self.data)))
-        data = deepcopy(self.data)
-        data[prop_name].append(value)
+        data = self._deepcopy(self._data)
+        data[prop_name].append(self._wrap(value))
         return FixtureBuilder(data, self.parent, self.location)
 
     def with_dict(self, prop_name):
@@ -128,9 +161,9 @@ class FixtureBuilder(object):
         :param prop_name: str
         :return: FixtureBuilder
         """
-        if not isinstance(self.data[prop_name], dict):
+        if not isinstance(self._data[prop_name], dict):
             raise AttributeError('dict operations are not supported on property {}'.format(prop_name))
-        return FixtureBuilder(self.data[prop_name], self, Location(prop_name))
+        return FixtureBuilder(self._data[prop_name], self, _Location(prop_name))
 
     def with_dict_list_element(self, prop_name, index=-1):
         """
@@ -139,10 +172,12 @@ class FixtureBuilder(object):
         :param index: int
         :return: FixtureBuilder
         """
-        element = self.data[prop_name][index]
+        if not isinstance(self._data[prop_name], list):
+            raise AttributeError('prop {} is not a list'.format(prop_name))
+        element = self._data[prop_name][index]
         if not isinstance(element, dict):
             raise AttributeError('dict operations are not supported on list element {} of property {}'.format(index, prop_name))
-        return FixtureBuilder(element, self, Location(prop_name, index))
+        return FixtureBuilder(element, self, _Location(prop_name, index))
 
     def duplicate_last_list_element(self, prop_name):
         """
@@ -150,8 +185,9 @@ class FixtureBuilder(object):
         :param prop_name: str
         :return: FixtureBuilder
         """
-        data = deepcopy(self.data)
-        data[prop_name].append(deepcopy(data[prop_name][-1]))
+        data = self._deepcopy(self._data)
+        new_element = self._deepcopy(data[prop_name][-1], True)
+        data[prop_name].append(new_element)
         return FixtureBuilder(data, self.parent, self.location)
 
     def done(self):
@@ -161,12 +197,44 @@ class FixtureBuilder(object):
         """
         if self.parent is None:
             raise NotImplementedError('done() is not defined for an empty parent. Maybe you want to access data')
-        data = deepcopy(self.parent.data)
+        data = self._deepcopy(self.parent._data)
         if self.location.has_index:
-            data[self.location.prop_name][self.location.index] = self.data
+            data[self.location.prop_name][self.location.index] = self._data
         else:
-            data[self.location.prop_name] = self.data
+            data[self.location.prop_name] = self._data
         return FixtureBuilder(data, self.parent.parent, self.parent.location)
+
+    def copy(self):
+        """
+        returns a copy of this FixtureBuilder while getting new values from value creators
+        :return:
+        """
+        if self._parent:
+            raise NotImplementedError('creating copy of a non root FixutreBuilder is not supported')
+        return FixtureBuilder.create(self._deepcopy(self._data, True))
+
+    def _deepcopy(self, values, call_creators=False):
+        if isinstance(values, dict):
+            return {key: self._deepcopy(value, call_creators) for key, value in values.items()}
+        if isinstance(values, list):
+            return [self._deepcopy(value, call_creators) for value in values]
+        return values.copy(call_creators)
+
+    def _wrap(self, values):
+        if isinstance(values, dict):
+            return {key: self._wrap(value) for key, value in values.items()}
+        if isinstance(values, list):
+            return [self._wrap(value) for value in values]
+        if isinstance(values, _Value):
+            return values
+        return _Value.create(values)
+
+    def _unwrap(self, values):
+        if isinstance(values, dict):
+            return {key: self._unwrap(value) for key, value in values.items()}
+        if isinstance(values, list):
+            return [self._unwrap(value) for value in values]
+        return values.value
 
 
 class FixtureCollection(object):
