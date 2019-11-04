@@ -5,7 +5,7 @@ coveralls==1.1
 docopt==0.6.2
 idna==2.5
 pbr==3.1.1
-requests==2.18.3
+requests==2.20.0
 requests-toolbelt==0.8.0
 six==1.10.0
 termcolor==1.1.0
